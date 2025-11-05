@@ -1,0 +1,132 @@
+# ================================
+# OS / Editor Junk
+# ================================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.orig
+
+# VS Code and JetBrains project files (keep settings out of git)
+.vscode/
+.idea/
+
+# ================================
+# Python bytecode / build artifacts
+# ================================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+wheels/
+*.egg-info/
+.eggs/
+
+# ================================
+# Virtual environments
+# ================================
+.venv/
+venv/
+.envrc
+
+# ================================
+# Environment files
+# Keep only the example in git; ignore real secrets.
+# ================================
+.env
+
+# ================================
+# Test / Coverage / Lint caches
+# ================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.tox/
+
+# ================================
+# Logs & runtime artifacts
+# ================================
+logs/
+*.log
+*.pid
+*.out
+*.err
+
+# celery beat schedule files / pid files (if used)
+celerybeat-schedule
+celerybeat.pid
+
+# ================================
+# Notebooks
+# ================================
+.ipynb_checkpoints/
+
+# ================================
+# Local data, exports, and temp dirs
+# (These are produced at runtime; keep them out of git)
+# ================================
+tmp/
+temp/
+cache/
+artifacts/
+exports/
+uploads/
+media/
+
+# If you keep local filesystem storage adapter data here in dev:
+storage_local/
+
+# ================================
+# Node (if you later add a small frontend inside this repo)
+# ================================
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# ================================
+# Docker / Compose
+# ================================
+# Build context leftovers and intermediate layers
+docker-compose.override.yml
+**/.dockerignore.local
+**/compose.override.yml
+
+# Compose env overlays (non-secret but machine-specific)
+infra/compose/env/*.local
+
+# Local volumes/data if you mount host paths (avoid committing them)
+infra/compose/data/
+infra/compose/minio-data/
+infra/compose/postgres-data/
+infra/compose/redis-data/
+
+# ================================
+# Alembic
+# ================================
+# Do NOT ignore migration files—commit them.
+# Keep autogenerate scratch logs out if you create any:
+alembic_autogen.log
+
+# ================================
+# IDE-specific Python helpers
+# ================================
+.pydevproject
+.project
+.settings/
+
+# ================================
+# Misc
+# ================================
+*.bak
+*.tmp
+*.temp
+~*

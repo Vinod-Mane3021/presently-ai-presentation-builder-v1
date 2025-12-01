@@ -11,7 +11,6 @@ GoalType = Literal[
     "train", "raise_funds", "onboard", "other"
 ]
 
-LengthMode = Literal["auto", "short", "medium", "detailed"]
 
 ToneType = Literal[
     "formal", "informal", "storytelling", "data_driven",
@@ -50,3 +49,24 @@ class GeneratePresentationRequest:
     num_slides: Optional[int] = 12
     language: Optional[str] = "en"
     tone: Optional[ToneType] = "neutral"
+
+class GenerateOutlineResponse:
+    title: str
+    outlines: list[str]
+
+class Slide:
+    id: str
+    title: str
+    points: list[str]
+    image_required: bool
+    image_gen_prompt: str
+    image_url: str
+
+class PresentationResponse:
+    title: str
+    description: str
+    slides: list[Slide] 
+
+
+
+

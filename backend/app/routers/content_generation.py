@@ -14,7 +14,16 @@ logger = logging.getLogger("app")
 def generate_outline(user_prompt: str):
     try:
         outline_response = OutlineClass.generate_outline(user_prompt)
-        return {"outline": outline_response}
+        return outline_response
+    except Exception as e:
+        return {"error": str(e)}
+    
+@router.post("/outlines-with-details", response_model=dict, status_code=status.HTTP_200_OK)
+def generate_outline(user_prompt: str):
+    try:
+        outline_response = OutlineClass.generate_outline(user_prompt)
+        outline_with_details_response = OutlineClass.generate_outline_with_details(outline_response)
+        return outline_with_details_response
     except Exception as e:
         return {"error": str(e)}
     

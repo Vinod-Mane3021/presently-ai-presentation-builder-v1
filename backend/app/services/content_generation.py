@@ -1,28 +1,32 @@
 from google import genai
 from app.settings import settings
-from app.prompts.outline import PROMPT_TEMPLATE, SYSTEM_INSTRUCTION 
+from app.prompts.outline import PROMPT_TEMPLATE, SYSTEM_INSTRUCTION, SYSTEM_INSTRUCTION_DETAIL
 import json
 import logging
 import base64
 import httpx
-from fastapi.responses import FileResponse 
+from fastapi.responses import FileResponse
 import os
-from schemas.content_generation import GeneratePresentationRequest
+from app.schemas.content_generation import (
+    GeneratePresentationRequest,
+    GenerateOutlineResponse,
+)
+from typing import Dict, Any
 
 client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 logger = logging.getLogger("app")
 
+
 class OutlineClass:
     @staticmethod
-    def generate_outline(user_prompt: str):
+    def generate_outline(user_prompt: str) -> GenerateOutlineResponse:
 
         final_prompt = PROMPT_TEMPLATE.format(user_prompt=user_prompt.strip())
 
         try:
             response = client.models.generate_content(
                 model="gemini-2.5-flash",  # or gemini-2.5-flash
-                
                 contents=[
                     {
                         "role": "user",
@@ -32,12 +36,12 @@ class OutlineClass:
                 config={
                     "system_instruction": SYSTEM_INSTRUCTION,
                     "temperature": 0.0,
-                    "max_output_tokens": 1024,
+                    "max_output_tokens": 10000,
                     "response_mime_type": "application/json",
                 },
             )
-
-            # Access the text content and parse it as JSON
+            
+        # Access the text content and parse it as JSON
             try:
                 outline_data = json.loads(response.text)
                 logger.info("Outline generation successful")
@@ -45,6 +49,54 @@ class OutlineClass:
             except json.JSONDecodeError as json_err:
                 logger.error(f"JSON decoding error: {json_err}")
                 raise ValueError(f"Failed to parse JSON: {json_err}\nResponse Text: {response.text}")
+
+        except Exception as e:
+            logger.error(f"Error during API call: {e}")
+            raise e
+
+    @staticmethod
+    def generate_outline_with_details(outline: GenerateOutlineResponse):
+
+        outline_title = outline["title"]
+        outline_points = outline["outlines"]
+        print(outline_title)
+        print(outline_points)
+        
+        detail_prompt = (
+            f"Original Presentation Topic: '{outline_title}'.\n\n"
+            f"Use the following high-level outline points to generate a detailed presentation structure. "
+            f"For each outline point, create a concise, professional slide title and generate 3-5 relevant bullet points ('points').\n"
+            f"Outline Points: {json.dumps(outline_points)}"
+        )
+
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=[
+                    {
+                        "role": "user",
+                        "parts": [{"text": detail_prompt}],
+                    }
+                ],
+                config={
+                    "system_instruction": SYSTEM_INSTRUCTION_DETAIL,
+                    "temperature": 0.0,
+                    # "max_output_tokens": 10000,
+                    "response_mime_type": "application/json",
+                }
+            )
+
+            # Access the text content and parse it as JSON
+            try:
+                outline_data = json.loads(response.text)
+                print(outline_data)
+                return outline_data
+            except json.JSONDecodeError as json_err:
+                logger.error(f"JSON decoding error: {json_err}")
+                raise ValueError(
+                    f"Failed to parse JSON: {json_err}\nResponse Text: {response.text}"
+                )
+
         except Exception as e:
             logger.error(f"Error during API call: {e}")
             raise e
@@ -54,17 +106,12 @@ class OutlineClass:
         try:
             response = client.models.generate_content(
                 model="gemini-2.5-flash-image",
-                contents=[
-                    {
-                        "role": "user",
-                        "parts": [{"text": prompt}]
-                    }
-                ],
+                contents=[{"role": "user", "parts": [{"text": prompt}]}],
                 config={
                     "response_modalities": ["TEXT", "IMAGE"],
                     "response_mime_type": "application/json",
-                    "temperature": 0.7, # Creativity level
-                }
+                    "temperature": 0.7,  # Creativity level
+                },
             )
             logger.info("Image generation successful")
             image_part = response.candidates[0].content.parts[0].inline_data
@@ -78,23 +125,14 @@ class OutlineClass:
         try:
             endpoint = "https://text-to-image-template.manev7780.workers.dev"
             api_key = settings.CLOUDFLARE_API_TOKEN
-            headers = {
-                "Content-Type": "application/json",
-                "x-api-key": api_key 
-            }
-            json = {
-                "prompt": prompt
-            }
+            headers = {"Content-Type": "application/json", "x-api-key": api_key}
+            json = {"prompt": prompt}
 
             logger.info("Cloudflare Worker image generation started")
 
             async with httpx.AsyncClient(timeout=60.0) as client:
                 try:
-                    response = await client.post(
-                        endpoint,
-                        headers=headers,
-                        json=json
-                    )
+                    response = await client.post(endpoint, headers=headers, json=json)
                     response.raise_for_status()
 
                     # The Worker returns the raw binary image data (PNG)
@@ -103,18 +141,21 @@ class OutlineClass:
                         return response.content
                     else:
                         logger.error("Cloudflare Worker returned an empty response.")
-                        raise ValueError("Cloudflare Worker returned an empty response.")
-                    
+                        raise ValueError(
+                            "Cloudflare Worker returned an empty response."
+                        )
+
                 except httpx.HTTPStatusError as e:
                     # Log and raise a specific error for API issues
                     error_detail = response.text or "Unknown API Error"
-                    logger.error(f"Worker API Error ({e.response.status_code}): {error_detail}")
+                    logger.error(
+                        f"Worker API Error ({e.response.status_code}): {error_detail}"
+                    )
                     raise ValueError(f"Image generation failed: {error_detail}")
-                
+
                 except Exception as e:
                     logger.error(f"Error during Cloudflare Worker call: {e}")
                     raise e
-
 
         except Exception as e:
             logger.error(f"Error saving image: {e}")
@@ -123,8 +164,10 @@ class OutlineClass:
     @staticmethod
     async def generate_image_and_save(prompt: str, file_path: str):
         try:
-            image_bytes = await OutlineClass.generate_image_with_cloudfare_worker(prompt)
-            
+            image_bytes = await OutlineClass.generate_image_with_cloudfare_worker(
+                prompt
+            )
+
             if image_bytes:
                 with open(file_path, "wb") as img_file:
                     img_file.write(image_bytes)
@@ -142,14 +185,14 @@ class OutlineClass:
         try:
             if "/" in image_name or ".." in image_name:
                 raise ValueError("Invalid image name")
-            
+
             file_path = f"generated_images/{image_name}"
 
             if not os.path.exists(file_path):
                 raise FileNotFoundError(f"{file_path} does not exist")
-        
+
             return FileResponse(file_path)
-        
+
         except Exception as e:
             logger.error(f"Error getting generated image: {e}")
             raise e

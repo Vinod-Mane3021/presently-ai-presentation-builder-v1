@@ -2,3 +2,10 @@
 ```
 pip freeze | grep 'fastapi\|uvicorn' >> requirements.txt
 ```
+
+- In Simple
+```
+pip freeze > requirements.txt
+```
+
+
